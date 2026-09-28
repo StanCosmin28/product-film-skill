@@ -29,13 +29,24 @@ One prompt gets you a 10 to 30 second film with fast kinetic typography, 2.5D ca
 
 ## Install
 
+**Claude Code.** Paste this and it installs the skill for you:
+
+```text
+Install the product-film skill from https://github.com/StanCosmin28/product-film-skill
+into ~/.claude/skills/product-film, then confirm SKILL.md is there.
+```
+
+**Terminal:**
+
 ```bash
 git clone https://github.com/StanCosmin28/product-film-skill.git ~/.claude/skills/product-film
 ```
 
-Or download `product-film-skill-v1.0.zip` from the [latest release](https://github.com/StanCosmin28/product-film-skill/releases/latest) and unzip it into `~/.claude/skills/`, so you end up with `~/.claude/skills/product-film/SKILL.md`.
+**Cowork or the Claude app.** Download `product-film-skill-v1.0.zip` from the [latest release](https://github.com/StanCosmin28/product-film-skill/releases/latest), then open Customize → Skills → + → Upload a skill.
 
-Open Claude Code in your product's repo. The skill is picked up automatically.
+The skill was built and tested in Claude Code. In Cowork the final render may not run: Remotion downloads a headless Chrome on the first render, and Cowork's sandbox only reaches approved sites.
+
+Then open your product's repo and ask for a launch video. The skill is picked up automatically.
 
 ## Quick start
 
@@ -68,5 +79,7 @@ The skill is MIT licensed, see [LICENSE](LICENSE).
 Remotion has its own license: free for individuals and companies with up to 3 employees. Larger companies need a company license ([remotion.dev/license](https://remotion.dev/license)).
 
 ---
+
+If it saved you time, a star helps other people find it.
 
 Made by [Stan Cosmin](https://stan-cosmin.com). Built with Remotion and Claude Code. More free resources at [stan-cosmin.com/resources](https://stan-cosmin.com/resources).
