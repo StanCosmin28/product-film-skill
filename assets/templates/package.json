@@ -1,0 +1,11 @@
+{
+  "name": "product-film",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "preview": "scripts/preview.sh Film9x16",
+    "master": "scripts/master.sh 9x16 film && scripts/master.sh 16x9 film"
+  }
+}

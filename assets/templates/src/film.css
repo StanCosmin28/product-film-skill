@@ -1,0 +1,34 @@
+/* Film stylesheet.
+   Path A: import the app's real CSS in the SAME order as its entry file. Paths are
+   relative to THIS file (src/), so with the film next to the app:
+     @import "../../app/src/index.css";
+     @import "../../app/src/styles/tokens.css";
+   Tailwind v4 apps also need @source for every folder whose classes appear on screen:
+     @source "../../app/src/components";
+   Without an app, Tailwind still works for film-only classes. */
+@import "tailwindcss"; /* delete this line if you import an app CSS that already imports tailwindcss */
+@import "@fontsource-variable/inter-tight/wght.css";
+@import "@fontsource-variable/geist-mono/wght.css";
+@source "./";
+
+/* ---------- Film overrides ----------
+   Remotion renders frame by frame: every CSS transition / keyframe animation
+   would run on wall-clock time and flicker. All motion comes from kit.tsx. */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+  caret-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  background: #020203;
+}
+
+.film-root {
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
