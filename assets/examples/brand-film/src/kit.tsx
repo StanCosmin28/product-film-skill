@@ -11,7 +11,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { C, EASE, F, HERO, PUNCH } from "./tokens";
+import { C, EASE, F, PUNCH } from "./tokens";
+
+const HERO = { weight: 600, tracking: "-0.045em", leading: 1.0 } as const;
 
 // ---------- math ----------
 export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -562,17 +564,16 @@ export const FloorShadow: React.FC<{ w: number; opacity?: number }> = ({ w, opac
   />
 );
 
-// ---------- v2 additions (from the brand film) ----------
+// ---------- film additions ----------
 export type Pt = { x: number; y: number };
 export const lerpPt = (a: Pt, b: Pt, t: number): Pt => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) });
-/** Zoom interpolation in log space: equal ratios per frame, so a big zoom never lurches. */
+/** Zoom interpolation in log space: equal ratios per frame, so a big zoom never feels like it lurches. */
 export const logerp = (a: number, b: number, t: number) => Math.exp(lerp(Math.log(a), Math.log(b), t));
 
 /**
- * Rig: the film camera. Actor point `A` (in the actor's own coordinates, its centre at 0,0)
- * is pinned to screen point `cam`, scaled by `s` and rotated around it.
- * With no rotation: screen = cam + s * (p - A). That one formula drives dives, pull-backs,
- * match cuts onto a real element, and overlays that must sit exactly on the real DOM.
+ * Rig: the film camera. Actor point `A` (in the actor's own coordinates, its
+ * centre at 0,0) is pinned to screen point `cam`, scaled by `s` and rotated
+ * around it. With no rotation: screen = cam + s * (p - A).
  */
 export const Rig: React.FC<{
   cam: Pt;
@@ -601,47 +602,25 @@ export const Rig: React.FC<{
   </div>
 );
 
-/** One word rising out of its own mask. `t` 0→1 in, `out` 0→1 away. */
+/** A masked rise for one word: `t` 0→1 lifts it out of its own baseline mask. */
 export const RiseWord: React.FC<{ t: number; out?: number; children: React.ReactNode; style?: React.CSSProperties }> = ({ t, out = 0, children, style }) => (
   <span style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: "0.06em 0.04em 0.16em", margin: "-0.06em -0.04em -0.16em" }}>
-    <span style={{ display: "inline-block", transform: `translateY(${(1 - t - out) * 112}%)`, ...style }}>{children}</span>
+    <span style={{ display: "inline-block", transform: `translateY(${((1 - t) - out) * 112}%)`, ...style }}>{children}</span>
   </span>
 );
 
-/**
- * RollWords: words replace each other in one mask. Incoming and outgoing ride the SAME
- * easing and move by the line height in px, so they are always exactly one line apart.
- * (Different easings, or % of the word's own box, make the two words overlap mid-swap.)
- */
-export const RollWords: React.FC<{ f: number; words: readonly string[]; ats: readonly number[]; exitAt: number; size: number; align?: "center" | "left"; accentLast?: boolean }> = ({
-  f,
-  words,
-  ats,
-  exitAt,
-  size,
-  align = "center",
-  accentLast,
-}) => {
-  const lineH = size * 1.3;
-  return (
-    <div style={{ position: "relative", height: lineH, overflow: "hidden", textAlign: align }}>
-      {words.map((w, i) => {
-        const next = ats[i + 1] ?? exitAt;
-        if (f < ats[i] - 18 || f > next + 2) return null;
-        const y = (1 - prog(f, ats[i] - 18, ats[i], EASE.glide) - prog(f, next - 18, next, EASE.glide)) * lineH;
-        return (
-          <div key={w + i} style={{ position: "absolute", left: 0, right: 0, top: size * 0.08, transform: `translateY(${y}px)` }}>
-            <Word size={size} upper={false} color={accentLast && i === words.length - 1 ? C.accent : C.ink}>
-              {w}
-            </Word>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+/** The site's display type (Bricolage Grotesque, semibold, tight). */
+export const display = (size: number, color: string = C.ink, weight = 600): React.CSSProperties => ({
+  fontFamily: F.display,
+  fontSize: size,
+  fontWeight: weight,
+  letterSpacing: "-0.045em",
+  lineHeight: 1.04,
+  color,
+  whiteSpace: "nowrap",
+});
 
-/** Gradient-filled text (a brand gradient on one accent word). */
+/** Gradient-filled text (the hero's "ships." treatment). */
 export const gradientText = (bg: string): React.CSSProperties => ({
   backgroundImage: bg,
   WebkitBackgroundClip: "text",
@@ -650,7 +629,7 @@ export const gradientText = (bg: string): React.CSSProperties => ({
   WebkitTextFillColor: "transparent",
 });
 
-/** A hairline grid on a plane (put it in a Rig with rx 60 / rz -45 for a 2:1 isometric floor). */
+/** The isometric hairline grid (the S mark's 2:1 plane), drawn on a plane `size` wide. */
 export const IsoGrid: React.FC<{ size: number; step?: number; opacity?: number }> = ({ size, step = 120, opacity = 1 }) => (
   <div
     style={{
@@ -660,7 +639,7 @@ export const IsoGrid: React.FC<{ size: number; step?: number; opacity?: number }
       width: size,
       height: size,
       opacity,
-      backgroundImage: "linear-gradient(rgba(255,255,255,0.07) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,0.07) 2px, transparent 2px)",
+      backgroundImage: `linear-gradient(rgba(255,255,255,0.07) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,0.07) 2px, transparent 2px)`,
       backgroundSize: `${step}px ${step}px`,
       backgroundPosition: `${size / 2}px ${size / 2}px`,
       WebkitMaskImage: "radial-gradient(closest-side, #000 30%, transparent 100%)",
@@ -668,7 +647,3 @@ export const IsoGrid: React.FC<{ size: number; step?: number; opacity?: number }
     }}
   />
 );
-
-/** A small camera punch on the big downbeats: wrap the scenes in scale(1 + punchAt(frame, PUNCHES)). */
-export const punchAt = (f: number, at: readonly number[], amount = 0.022, decay = 7) =>
-  at.reduce((acc, p) => acc + (f >= p ? amount * Math.exp(-(f - p) / decay) : 0), 0);

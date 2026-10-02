@@ -8,6 +8,13 @@ export const FPS = 60;
 export const DURATION = 780; // 13.0 s. See references/craft.md §2 for 10 / 15 / 20 / 30 s maps
 export const BPM = 120;
 export const BEAT = (60 / BPM) * FPS; // 30 frames per quarter note
+// With a real track: set BEAT from `python3 scripts/music.py grid <id> --drop <s>` (e.g. 0.63154 * FPS),
+// put the track's drop on the turn, and place every cue with B(n).
+export const DROP = 60; // the frame the track's drop lands on
+export const B = (n: number) => DROP + n * BEAT; // frame of beat n after the drop
+export const MUSIC = { file: "audio-src/m<id>.mp3", start: 0 /* track drop (s) - DROP / FPS */ } as const;
+/** downbeats that get a small camera punch (Film.tsx) */
+export const PUNCHES: number[] = [];
 
 // ---------- Palette (defaults = "dark editorial"; accent set by scaffold) ----------
 export const C = {

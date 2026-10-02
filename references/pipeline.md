@@ -3,7 +3,8 @@
 Contents: 1. Project layout · 2. Path A: mounting real components · 3. Determinism ·
 4. Readiness · 5. Animating real UI from outside · 6. Special cases (dialogs, typing, clocks,
 charts, counters, QR) · 7. Path B: capture · 8. Devices and windows · 9. Motion blur, glow, grain ·
-10. Handoffs · 11. Rendering and performance · 12. Pitfalls hit so far (with fixes)
+10. Handoffs · 11. Rendering and performance · 12. Pitfalls hit so far (with fixes) ·
+13. Measuring the real DOM · 14. The Rig camera and match cuts · 15. 4K masters · 16. The real logo
 
 ---
 
@@ -91,12 +92,17 @@ Remotion renders frames in several tabs, out of order. Anything driven by wall-c
 
 ## 4. Readiness (never capture a half-loaded frame)
 
-- `FontGate`: `delayRender` until the fonts load.
+- `FontGate`: `delayRender` until the fonts load, and **mount the children only after that**, so every
+  layout effect measures final text metrics (the template does this).
 - `useImagesReady(ref)`: set `loading="eager"` on every `<img>`, then `img.decode()` them all.
   Lazy images inside transformed containers are otherwise missed.
 - `useSelectorReady(ref, selector)`: for async layouts (a chart that measures its container). Poll
   with rAF until the selector exists, then wait two more frames.
 - **Use local media only.** Download demo photos into `public/film/`, with no network calls during the render.
+- **Root-relative images.** Apps write `src="/avatar.png"`; Remotion serves `public/` elsewhere. Copy the
+  files into the film's `public/` and rewrite the src with `staticFile()` in `useImagesReady` (the template does).
+- **Scroll-reveal classes** (`.reveal`, `[data-aos]`, `.af-reveal`…) start at opacity 0 and wait for an
+  IntersectionObserver that never fires in a render. Override them in `film.css`, scoped to the mount.
 
 ## 5. Animating real UI from outside
 
@@ -209,7 +215,9 @@ you drive from `useCurrentFrame()`.
 
 ## 11. Rendering and performance
 
-- Preview: `--scale=0.5` renders 780 frames in about 25 s. A full-res master with 4 sub-frames (3,120 frames)
+- Preview with `scripts/frames.sh` at 1×: about 40–60 s for 780–1200 frames. Avoid `--scale=0.5` for
+  layout checks: at another device-pixel-ratio text breaks onto different lines.
+- Preview: `--scale=0.5` renders 780 frames in about 25 s (motion only, not layout). A full-res master with 4 sub-frames (3,120 frames)
   takes about 3–4 min on a 10-core Mac, and the ProRes intermediate is about 2 GB. Delete it afterwards.
 - `Config.setConcurrency(6)`, `setChromiumOpenGlRenderer("angle")`, PNG frames.
 - Virtualise off-screen UI (only render reel items within about 2.6 of centre).
@@ -242,3 +250,69 @@ you drive from `useCurrentFrame()`.
 | a trademark visible in the product photo | demo data used a brand shot | swap for neutral images |
 | words vanish from generated files | backticks inside an unquoted shell heredoc (`<<EOF`) run as commands | quote the heredoc delimiter (`<<'EOF'`) |
 | headline overflows the frame | fixed font size + a longer word in the product copy | `fitSize()` for every headline |
+
+## 13. Measuring the real DOM
+
+Overlays, camera targets and match cuts need the real elements' boxes. Measure **layout offsets**
+(`rectIn(el, root)` in `surfaces.tsx`: sums `offsetLeft/Top` up the `offsetParent` chain). They ignore CSS
+transforms, so they're right under any camera move, at any frame a render tab starts on.
+- The root, and any container you measure inside, needs `position: relative`. Otherwise the chain skips it,
+  sums all the way to `<body>`, and every target lands hundreds of pixels off.
+- `position: fixed` elements (a site's nav) and elements centred with the `translate` property have no
+  usable offsets. Measure them with `getBoundingClientRect()` against their container's rect and divide by
+  `rect.width / offsetWidth` (one ratio undoes the camera's scale). Only valid while the camera has no rotation.
+- Text widths: put each word in its own span and read the spans' offsets; for a single word inside a
+  full-width heading, measure with a canvas (`ctx.font` from `getComputedStyle`, plus `letterSpacing × length`).
+- Measure once in a layout effect, hold the frame with `delayRender` until the numbers are in state.
+- Viewport units follow the video (`82vh` of 1920 px is 1574 px). Override min-heights in scoped CSS.
+
+## 14. The Rig camera and match cuts
+
+`Rig` pins an actor point `A` (actor coordinates, centre at 0,0) to a screen point `cam`, then scales by `s`
+and rotates. With no rotation, `screen = cam + s × (p − A)`, so you can:
+- **dive** into any measured element (interpolate `A` towards it and `s` up, in log space with `logerp`);
+- **pull back** from a zoomed headline into the whole window, then tilt into an iso plane (rx 60, rz −45);
+- put a **screen-space overlay exactly on a real element** (a dot on a period, a card on an avatar).
+
+**Match cut onto real text.** Render a film copy of the element with the *same classes* (so the same
+font, size, tracking, wrapping) at the measured box, split into word spans you can animate. Hide the real
+element while the copy plays, then swap on a frame where both are at rest. Give the copy `width + 1px`:
+`offsetWidth` rounds down, and a copy 0.4 px narrower can wrap where the real one doesn't.
+
+**Shared-curve swipes.** Two scenes in overlapping `<Sequence>`s, both translating on one global-frame curve.
+Roll the outgoing scene's headline out a few frames before the incoming one rolls in, and fade the outgoing
+scene's big elements as they cross the incoming headline.
+
+## 15. 4K masters
+
+- Render the sub-frames with `--scale=2` (2160×3840 / 3840×2160) to **ProRes 422 HQ**: about 3.7 MB per frame,
+  ~18 GB for a 20 s film with 4 sub-frames. ProRes 4444 at 4K would be ~40 GB. Check `df -h` first.
+- Average at 16-bit, then split: the 4K master, and a 1080p copy downscaled from the 4K average with
+  `lanczos+accurate_rnd+full_chroma_int` (supersampled: sharper than a native 1080p render).
+- H.264 `-crf 14 -profile:v high -x264-params aq-mode=3:aq-strength=0.9`. `aq-mode=3` keeps dark gradients
+  from blocking. Grain at ≤ 3 %: more grain costs bitrate and reads as compression.
+- `REUSE=1 scripts/master.sh …` re-encodes from an existing sub-frame render (an audio or encode fix in 2 min
+  instead of 13).
+- zsh: write `${VAR}` in scripts. `$OFF:linear` is parsed as the `:l` (lowercase) modifier and silently eats
+  `inear`; it broke a loudnorm call after a 13-minute render.
+
+## 16. The real logo
+
+- Search before you trace: `mdfind -onlyin ~ "kMDItemFSName == '*logo*'"`, plus the brand's handle, for
+  `.ai`, `.svg`, `.pdf`, `.png`. Illustrator `.ai` files are PDFs: `pdfinfo` lists the artboards,
+  `pdftoppm -r 40 -png` renders a contact sheet, `pdftocairo -svg -f N -l N` extracts one artboard as exact paths.
+- Keep the mark's own structure (two halves → two paths you can slide), its exact fill colours, and its disc.
+- Show the user the variants you found when it isn't obvious which is primary.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| every overlay lands far off | measured root not `position: relative` | position the root and the containers in the chain |
+| the nav avatar's box is wrong | fixed / `translate`-centred element measured by offsets | bounding-rect ratio against its container |
+| the overlay copy wraps differently | `offsetWidth` rounded down | copy width + 1 px |
+| a preview shows a different layout than the master | half-scale preview (DPR 0.5) | preview at 1× (`frames.sh`) |
+| words overlap mid-swap | incoming/outgoing on different easings, or moving by % of their own box | one easing, move by the line height in px |
+| a swipe shows two headlines | both scenes' text visible during the overlap | roll the outgoing text out first; fade the outgoing scene |
+| images 404 in the render | root-relative `src` | copy into `public/`, rewrite with `staticFile()` |
+| empty sfx file after a failed download | file opened before the request | fetch, then write |
+| `CERTIFICATE_VERIFY_FAILED` in a Python fetch | python.org build without root certificates | fetch with `curl` |
+| loudnorm "Invalid chars 'inear=true'" | zsh `:l` modifier on `$VAR:linear` | `${VAR}` everywhere |

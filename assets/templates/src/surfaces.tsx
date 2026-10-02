@@ -46,16 +46,38 @@ export const filmClock = (globalFrame: number, fps = 60) => FILM_NOW + (globalFr
 // Readiness: never capture a half-loaded frame
 // ============================================================================
 export const FontGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // children mount only AFTER the fonts load: anything measured in a layout effect
+  // (line widths, text offsets for match cuts) then sees the final metrics
   const [handle] = useState(() => delayRender("film: fonts"));
+  const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     Promise.all(FONT_FACES.map((f) => document.fonts.load(f)))
       .then(() => document.fonts.ready)
-      .then(() => continueRender(handle));
+      .then(() => {
+        setReady(true);
+        requestAnimationFrame(() => continueRender(handle));
+      });
   }, [handle]);
-  return <>{children}</>;
+  return ready ? <>{children}</> : null;
 };
 
 /** Holds the render until every <img> inside `ref` is loaded and decoded. */
+// Layout offsets ignore CSS transforms, so they measure real DOM under any camera move:
+export type Rect = { x: number; y: number; w: number; h: number };
+/** `el`'s box relative to `root`. `root` (and anything in between you rely on) must be positioned. */
+export const rectIn = (el: HTMLElement | null, root: HTMLElement): Rect => {
+  let x = 0;
+  let y = 0;
+  const w = el?.offsetWidth ?? 0;
+  const h = el?.offsetHeight ?? 0;
+  while (el && el !== root) {
+    x += el.offsetLeft;
+    y += el.offsetTop;
+    el = el.offsetParent as HTMLElement | null;
+  }
+  return { x, y, w, h };
+};
+
 export const useImagesReady = (ref: React.RefObject<HTMLElement | null>, label = "images") => {
   const [handle] = useState(() => delayRender(`film: ${label}`));
   useLayoutEffect(() => {
@@ -65,6 +87,10 @@ export const useImagesReady = (ref: React.RefObject<HTMLElement | null>, label =
     imgs.forEach((img) => {
       img.loading = "eager";
       img.decoding = "sync";
+      // apps reference their public/ files from the root ("/avatar.png"); Remotion serves
+      // public/ elsewhere. Copy those files into the film's public/ and rewrite the src.
+      const raw = img.getAttribute("src") ?? "";
+      if (raw.startsWith("/") && !raw.startsWith("/static")) img.src = staticFile(raw.slice(1));
     });
     Promise.all(imgs.map((img) => (img.complete && img.naturalWidth > 0 ? Promise.resolve() : img.decode().catch(() => undefined)))).then(() =>
       continueRender(handle),

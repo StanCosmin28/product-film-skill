@@ -1,57 +1,120 @@
-# Sound: procedural design on the beat grid
+# Sound: a real track, real effects, cut on the beat
 
-Sound is half the perceived quality. The default is **procedural sound design**, generated in
-numpy/scipy from the film's own frame cues. It's always delivered with a **silent copy**, so the
-user can lay a licensed track underneath. You can't listen to what you make, so verify it
-visually (waveform + spectrogram) and tell the user to listen before publishing.
+Sound is half the perceived quality, and it's where v1 lost the client: procedural music sounded
+like a demo. The default since v2 is **a real royalty-free track** that the film is cut to, plus
+**real sound effects** placed on frames. Procedural sound stays as a fallback. You can't listen to any
+of it, so every choice is made from data and stated as such. Tell the user to listen before publishing,
+and always deliver silent copies.
 
-## The grammar
+## 1. The grammar
 
-- **The problem beat has no pulse**, only weight: impacts on slams, clacks of tiles landing, a low rumble.
-- **The turn switches the pulse on:** a brand "ping" (clean sine + octave) and the first kick.
-- **120 BPM grid** (30 frames per beat at 60 fps): a kick on every beat, closed hats on the off-beats,
-  soft 16ths, an off-beat sub bass (pumping between kicks) and a quiet pad chord per bar, ducked
-  under the kick.
-- **Every visual event gets a cue:** whooshes on camera moves (band-pass noise sweeping up or down),
-  ticks on UI pops (short sine blips), key clicks on typing, a click on the button, a shimmer
-  (a quick run of high bells) on a glint, counter ticks while numbers run, and a riser into the logo.
-- **The logo sting lands ON the beat** (put the logo frame on the grid): a sub impact + an open
-  chord of bells + the ping. The pulse stops there, and the tail rings under the question.
+- **The track leads.** Its drop lands on the turn, its strongest downbeat on the logo, its snares on
+  the flips and swaps. Measure the track first, then build the beat map on its grid.
+- **The problem plays over the build** (the intro or riser before the drop), about 5 dB back.
+- **The turn is the drop.** The first green dot, the first real UI, the first accent colour.
+- **Every visual event gets an effect:** whooshes on camera moves, ticks on UI pops, a click on flips and
+  buttons, typing under code, a confirmation on a success, a riser into the logo.
+- **Silence before the logo.** The beat drops out for the last eighth notes before the logo, and the
+  logo impact slams back in on the downbeat. It's the single most "wow" moment in the mix.
+- **The end rides out:** after the logo the bed runs through a low-pass sweep and fades.
 
-## Files
+## 2. Find tracks (`scripts/music.py search`)
 
-- `scripts/sfx.py`: the instruments (kick, hat, impact, clack, tick, key_click, whoosh, suck,
-  ping, bell, shimmer, riser, sub_note, pad_chord), `Bus`, `note()`, `fr()` (frame → seconds)
-  and `render(drums, music, sfx, pulse_from, pulse_to, out_path)`, which sidechains the music,
-  adds a synthetic reverb to the SFX and pads, and peak-normalises.
-- `scripts/sound.py`: the film's **score**, a list of cues whose frame numbers are copied from the
-  scenes (write `# B3 — …` comments). When a scene's timing changes, move its cue too.
+Mixkit (Envato) publishes every listing as JSON-LD, so search is a parse, not guesswork:
 
-## Cue sheet from the beat map
-
-For each beat, list its slams (`at + 4..5` lands), camera moves, pops, typing spans, clicks,
-glints, counters and transitions. Then write one line per cue:
-```python
-sfx.add(impact(0.5), fr(E + 6), 0.35)                 # EDIT. lands
-sfx.add(whoosh(0.34, 4000, 400, 0.3, 0.45), fr(E + 94))  # the window leaves upward
+```bash
+python3 scripts/music.py search hip-hop trap edm cinematic corporate technology future-bass
 ```
-Key clicks: at most one every 2 frames, however fast the text types.
 
-## Mix and loudness
+Tag pages are `mixkit.co/free-stock-music/tag/<tag>/`, genre pages are `mixkit.co/free-stock-music/<genre>/`.
+The listing is saved to `audio-src/catalog.json`. Skip titles named after real artists ("X type beat").
 
-- Peak-normalise in Python, then `ffmpeg -af loudnorm=I=-14:TP=-1.5:LRA=11` (the social / streaming
-  target). Verify with `ebur128=peak=true`: integrated about −14 LUFS, true peak ≤ −1.5 dBFS.
-- Look at the waveform (`showwavespic`). It needs visible dynamics: B1 punches with gaps, then kicks
-  on the grid. A solid block means the mix is over-compressed or too bass-heavy. The two usual fixes
-  are to lower the sub, and to move the bass to the off-beats.
-- Check the spectrogram (`showspectrumpic`). The low end shouldn't be continuous yellow in the problem beat.
+Genre by brief (what worked):
 
-## Variants the user may ask for
+| Brief | Look at | Example that shipped |
+|---|---|---|
+| modern creator, tech founder, "more wow" | trap / hip-hop with an 808 drop, 90–100 BPM | "Thunder" (Arulo), 95 BPM |
+| dark, premium, cinematic | ambient / synthwave with a late drop | "Cyberpunk City" (A. M.), 100 BPM |
+| upbeat SaaS, corporate | EDM / house, 120–128 BPM, four-on-the-floor | "Golden Storm" (Diego Nava), 126 BPM |
+
+## 3. Measure (`scripts/music.py fetch / analyze / grid`)
+
+```bash
+python3 scripts/music.py fetch 318 470 140 1167 369
+python3 scripts/music.py analyze 318 470 140 1167 369   # tempo, the 3 biggest drops, audio-src/analysis.png
+python3 scripts/music.py grid 318 --drop 20.2           # exact beat (hat-grid fit) + the downbeat at the drop
+```
+
+Read `analysis.png`. A **drop** is where the low band (20–120 Hz) turns solid after a thin stretch; a
+**riser** is a rising diagonal right before it; a **break** is a gap in the low band. Pick the track whose
+drop strength and structure fit the story: a build of 1.5–3 s you can put under the problem, a drop, then
+at least 15 s of beat with one break you can use for a scene change.
+
+`grid` fits every hi-hat onset onto one grid (least squares), which is far more precise than a median
+interval, then snaps the kick at the drop onto it. Write the result into `tokens.ts`:
+
+```ts
+export const BEAT = 0.63154 * FPS;          // from music.py grid
+export const DROP = 120;                    // the turn's frame
+export const B = (n: number) => DROP + n * BEAT;
+export const MUSIC = { file: "audio-src/m318.mp3", start: 20.208 - DROP / FPS } as const;
+export const LOGO_AT = B(24);               // a bar downbeat
+```
+
+Snares in trap usually sit on odd beats after the drop (B(1), B(3)…). Bars are every 4 beats.
+
+**Licence.** Mixkit Stock Music Free License: free for commercial and personal projects, no attribution,
+don't redistribute the track on its own. Record the track, artist and licence in `docs/CREDITS.md`, and tell
+the user to re-read mixkit.co/license before a paid campaign.
+
+## 4. Effects (`scripts/sfx_pack.py`)
+
+```bash
+python3 scripts/sfx_pack.py          # the curated pack -> audio-src/sfx/ + meta.json (onset, peak, tail)
+python3 scripts/sfx_pack.py 2900     # add ids from mixkit.co/free-sound-effects/<category>/
+```
+
+The pack's roles are in the script (whooshes, sweeps, UI clicks, typing, confirmations, trailer impacts,
+risers). `meta.json` stores where each file **peaks**: a "whoosh impact" may peak 1 s in, a riser at its end.
+`mix.py` lands the peak on the cue frame, so the listener hears the hit exactly when it's seen.
+Look at the envelopes (`ffmpeg ... showwavespic`) before choosing a logo hit: a swell with no transient
+won't feel like a lock.
+
+## 5. The mix (`scripts/mix.py`)
+
+One cue per visual event, copied from the scenes, with a comment:
+
+```python
+place("s2908", DROP_FILM, -9)               # the drop: the green dot is born
+place("s2577", Bt(7), -10)                  # a row flips on the snare
+place("s2537", Bt(20.5), -15, trim=(6.9, 7.6), fade=0.04)  # code types in
+place("s788", LOGO, -2)                     # the logo impact (its rise starts ~1.4 s early)
+duck_at(LOGO, -6)
+```
+
+Levels that worked: effects −10 to −20 dB, impacts −5 to −9, the logo impact −2. The intro sits at −5 dB,
+and the pre-logo mute is −22 dB. When a scene's timing moves, move its cue.
+
+## 6. Loudness
+
+`master.sh` runs a two-pass `loudnorm` (measure, then apply linearly, no pumping) to −14 LUFS with a
+−1.5 dBTP true peak, then a limiter. Verify with `ebur128=peak=true`: integrated about −14 LUFS and the
+peak under −1.5 dBFS. Look at the waveform: it needs visible dynamics, a thinner intro, a wall on the drop,
+and a dip before the logo.
+
+## 7. Variants the user may ask for
 
 | Ask | Do |
 |---|---|
-| **no sound** | deliver only the `-silent` masters; skip `sound.py` |
-| **licensed music** | pick a track at the film's BPM (or retime the grid to the track's BPM: 60 fps × 60 / BPM frames per beat), cut on the downbeats, keep the SFX at −6 dB under the music or drop them |
-| **voice-over** | write a script of at most 2.3 words per second, leave space under the VO (sidechain the music by −8 dB), and put the logo on the last word's beat |
-| **calmer** | 90–100 BPM, no hats on 16ths, softer pad, no impacts; whooshes only |
-| **punchier** | add claps on 2 and 4, a stronger kick click, shorter reverb |
+| **no sound** | `scripts/master.sh 9x16 <name> --silent` |
+| **a different feel** | another genre from the shortlist, re-run `grid`, re-time `B(n)`; keep the beat map's structure |
+| **their own track** | measure it with `music.py analyze/grid`, then the same rules |
+| **voice-over** | a script of at most 2.3 words per second, music −8 dB under the voice, the logo on the last word's beat |
+| **calmer** | 90–100 BPM, no camera punches, whooshes only |
+| **punchier** | a harder drop, punches on every bar, a click on every swap |
+
+## 8. Fallback: procedural sound
+
+When there's no network or the user wants no licensed audio, `scripts/sound.py` + `scripts/sfx.py` build a
+score in numpy on the film's grid (kick, hats, pad, sub, impacts, whooshes, risers, the logo sting). It sounds
+like a demo next to a real track; say so. `master.sh` uses it automatically when there's no `audio-src/`.

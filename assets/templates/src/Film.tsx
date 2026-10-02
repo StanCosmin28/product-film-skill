@@ -4,8 +4,8 @@
 import React from "react";
 import { AbsoluteFill, Freeze, Sequence, useCurrentFrame } from "remotion";
 import "./film.css";
-import { BEATS, type BeatId } from "./tokens";
-import { Canvas, Grain } from "./kit";
+import { BEATS, PUNCHES, type BeatId } from "./tokens";
+import { Canvas, Grain, punchAt } from "./kit";
 import { FontGate, filmClock } from "./surfaces";
 import { EndCard, Problem, Proof, Turn } from "./scenes";
 
@@ -25,6 +25,7 @@ export const Film: React.FC = () => {
     <FontGate>
       <AbsoluteFill className="film-root">
         <Canvas />
+        <AbsoluteFill style={{ transform: `scale(${1 + punchAt(frame, PUNCHES)})` }}>
         <Beat id="problem">
           <Problem />
         </Beat>
@@ -37,7 +38,8 @@ export const Film: React.FC = () => {
         <Beat id="end">
           <EndCard />
         </Beat>
-        <Grain />
+        </AbsoluteFill>
+        <Grain opacity={0.03} />
       </AbsoluteFill>
     </FontGate>
   );

@@ -1,0 +1,60 @@
+/* The site's real stylesheet, as main.jsx loads it:
+   tailwindcss + tw-animate-css + afacere-theme.css + the dark-glass tokens. */
+@import "../../stc.com/src/index.css";
+
+/* Tailwind must see the class names used by the real components */
+@source "../../stc.com/src/components";
+@source "../../stc.com/src/pages";
+@source "./";
+
+/* The site's fonts (Google Fonts on the live site; local files here, no network in the render) */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("./fonts/BricolageGrotesque-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: block;
+}
+
+/* ---------- Film overrides ----------
+   Remotion renders frame by frame: every CSS transition or keyframe animation
+   would run on wall-clock time and flicker. All motion comes from useCurrentFrame(). */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+  caret-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+.film-root {
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scroll-reveal classes start hidden and wait for an IntersectionObserver
+   that never runs here: show them; the film drives its own reveals. */
+.site-page .af-reveal,
+.site-page .af-stagger > * {
+  opacity: 1;
+  transform: none;
+}

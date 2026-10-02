@@ -1,14 +1,16 @@
 # Product Film: guide
 
-This skill makes a 10–30 second launch or promo video for your app, SaaS or website. The
-video is built from **your real product UI**: your actual components with demo data, or real
-captures of your app. It uses fast kinetic typography, 2.5D camera moves, real motion blur and a sound
-design synced to every cut. The story checks itself: the problem comes before the solution, there's one logo reveal,
-it ends on a question, and every claim is real.
+This skill makes a 10–30 second launch, promo or **personal brand** video for your app, SaaS, website
+or services. The video is built from **your real UI**: your actual components with demo data, or real
+captures of your app. It's cut to the beat of a **real music track** (royalty-free, picked and measured
+for you), with real sound effects on every move, kinetic typography, 2.5D camera moves, real motion blur,
+and 4K masters. The story checks itself: the problem comes before the solution, there's one logo reveal
+(your real logo), it ends on a question, and every claim is real.
 
 You get:
-- `…-9x16.mp4` (Reels, TikTok, Shorts) and `…-16x9.mp4` (YouTube, LinkedIn, website)
-- `…-silent.mp4` copies, to put your own licensed music under
+- `…-9x16-4k.mp4` (Reels, TikTok, Shorts) and `…-16x9-4k.mp4` (YouTube, LinkedIn, website), plus 1080p copies
+- `…-silent.mp4` copies, to put your own music under
+- `docs/CREDITS.md` (the track, the artist, the licence)
 - posters (cover frames) and contact sheets (one frame every 0.5 s)
 - `docs/PASS1.md` (the plan) and `docs/VERIFICATION.md` (the checks, with evidence)
 
@@ -19,7 +21,8 @@ You get:
 - **Claude Code** with this folder at `~/.claude/skills/product-film/` (it's picked up automatically)
 - **Node 18+**, **ffmpeg** (`brew install ffmpeg`), **Python 3** with `numpy scipy pillow`
   (`pip3 install numpy scipy pillow`)
-- macOS or Linux, and about 3 GB of free disk while a master renders
+- macOS or Linux, and about 20 GB of free disk while a 4K master renders (it's freed at the end)
+- `curl` (for the music and sound effects), and `poppler` (`brew install poppler`) if your logo lives in an `.ai` or `.pdf`
 - **Remotion license:** free for individuals and companies with up to 3 employees. Larger companies
   need a company license (remotion.dev/license).
 
@@ -45,7 +48,8 @@ Audience + platform: <e.g. athletes · TikTok / Reels>
 Length: <10 | 13 | 15 | 20 | 30> s    Pace: <kinetic | standard | calm>
 Style: <our design system | dark editorial | light editorial | playful | luxury | technical>
 Formats: <9:16 + 16:9 | also 1:1 | also 4:5>
-Sound: <sound design | silent only | I'll add music at <BPM> BPM | voice-over script>
+Type: <product film | brand film about me and my services>
+Music: <pick a track for me | modern trap / hip-hop | cinematic | upbeat EDM | my own track: <file> | silent only>
 Language: <English | Română | …>
 Never say / never show: <banned words, competitor names, prices…>
 CTA: <our real sign-up component | "Try it free" | …>
@@ -55,6 +59,13 @@ Demo user name: <e.g. "ProAthlete" | pick a neutral one>
 **Short version.** This works too, because the skill discovers the rest from your repo:
 ```text
 Use product-film to make a 13 s wow launch video for this app, 9:16 and 16:9, with sound. One shot.
+```
+
+**A brand film (you and your services):**
+```text
+Use product-film to make a 20 s brand film about me and my services, from my site in this repo.
+Focus on what I solve and what I offer, not my photo. My logo is in ~/Design. Modern, wow, cut to a real track.
+9:16 and 16:9, 4K. One shot.
 ```
 
 **In Romanian:**
@@ -70,13 +81,17 @@ Fără prețuri. One shot, nu te opri să mă întrebi.
 
 | You want | Say something like | What changes |
 |---|---|---|
-| **Slower / calmer** | "calmer pace", "more premium, slower" | 60-frame grid, longer holds, glides instead of punches, no shake |
-| **Faster / punchier** | "more kinetic", "faster cuts" | 7–8 frame micro-moves, more word swaps, stronger springs |
+| **Slower / calmer** | "calmer pace", "more premium, slower" | a 90–100 BPM track, longer holds, glides instead of punches |
+| **Faster / punchier** | "more kinetic", "faster cuts", "more wow" | a track with a hard drop, camera punches on the downbeats, flips on the snares |
+| **A brand film** | "about me and my services" | pain → fix rows, your real services on a carousel, the strategy → deploy tower |
+| **Another music feel** | "more modern", "cinematic", "EDM" | a new shortlist in that genre, re-measured; the cut moves to its beat |
+| **Less of me** | "less of my photo" | your site's own avatar only; no portrait, no signature |
+| **Your real logo** | "use my logo from <file>" | the exact vector and colours from the file |
 | **Longer / shorter** | "make it 20 seconds", "a 10 s cut" | beat map template for that length (10 / 13 / 15 / 20 / 30 s) |
 | **Another style** | "light version", "playful", "luxury", "techy with code vibes" | style preset (canvas, type, accent use, motion) |
 | **Your brand colours / fonts** | "use our Figma colours #… and font …" | tokens.ts palette + fonts (defaults come from your code) |
 | **No sound** | "no sound", "silent only" | only `-silent` masters |
-| **Your own music** | "I'll use a track at 128 BPM" | the cut grid is retimed to 128 BPM, cuts land on downbeats, silent master delivered |
+| **Your own music** | "use this track: song.mp3" | it measures the track's beat and drop, and cuts the film to it |
 | **Voice-over** | "add a voice-over script" | a script of at most 2.3 words/s, space in the mix, logo on the last word |
 | **Other formats** | "also square", "also 4:5 for the feed" | extra compositions with their own safe zones |
 | **Another language** | "text in Romanian" | the COPY strings, with reading time rechecked |
@@ -95,14 +110,18 @@ motion-blur strength (shutter), the logo animation style.
 1. **Intake.** It reads your design tokens, fonts, logo, copy and pricing, and asks only what it can't find.
 2. **UI path.** A mounts your real React components (best). B captures your running app or site.
    C uses screenshots you give it. It never redraws your UI by hand.
-3. **Plan.** It writes the story, the beat map with exact frames, the on-screen copy and an anti-"AI slop" list.
-4. **Build.** It scaffolds a Remotion project next to your app (`scripts/scaffold.sh`) and writes the scenes.
-5. **Preview loop.** Half-scale renders, contact sheets and frame-by-frame checks of every cut.
-6. **Verify.** The problem comes before the solution, times are chronological, there's one logo reveal
-   with the CTA, figures are real, reading time is enough, and it ends on a question.
-7. **Master.** 4 sub-frames per frame averaged into real motion blur, −14 LUFS audio, and silent copies.
+3. **Music.** It searches a royalty-free catalog, analyzes 10–15 tracks (tempo, drop, structure), picks one
+   plus 2 alternates, and measures its beat grid. The film's beats are built on that grid.
+4. **Plan.** It writes the story, the beat map in beats, the on-screen copy and an anti-"AI slop" list.
+5. **Build.** It scaffolds a Remotion project next to your app (`scripts/scaffold.sh`) and writes the scenes.
+6. **Preview loop.** Full-res renders, frame grids and frame-by-frame checks of every cut.
+7. **Sound.** Real sound effects, each landing its peak on a frame, mixed under the track.
+8. **Verify.** The problem comes before the solution, times are chronological, there's one logo reveal
+   with the CTA, figures are real, reading time is enough, the cut sits on the beat, and it ends on a question.
+9. **Master.** Rendered at 4K, 4 sub-frames per frame averaged into real motion blur, a supersampled
+   1080p copy, −14 LUFS audio, and silent copies.
 
-Render time on a recent Mac: about 25 s for a preview, and about 3–4 min per final master.
+Render time on a recent Mac: about 1 min for a full-res preview, and about 12–13 min per 4K master.
 
 ---
 
@@ -114,15 +133,19 @@ Inside the film folder:
 |---|---|
 | Any on-screen text | `src/tokens.ts` → `COPY` |
 | Colours, fonts | `src/tokens.ts` → `C`, `F`, `FONT_FACES` |
-| Timing of beats | `src/tokens.ts` → `BEATS` (and the matching lines in `scripts/sound.py`) |
+| Timing of beats | `src/tokens.ts` → `BEATS`, `B(n)` (and the matching cues in `scripts/mix.py`) |
+| Music | `src/tokens.ts` → `MUSIC`, `BEAT`, `DROP`, and `scripts/mix.py` (see `scripts/music.py`) |
 | Demo user / data | `src/filmData.ts` |
 | Logo | `public/film/logo.svg` |
 
 ```bash
-npm run studio                       # live preview in the browser (scrub the timeline)
-scripts/preview.sh Film9x16          # quick half-scale render + contact sheet
-scripts/master.sh 9x16 myfilm        # final 9:16 (+ silent copy)
-scripts/master.sh 16x9 myfilm        # final 16:9
+npm run studio                           # live preview in the browser (scrub the timeline)
+scripts/frames.sh Film9x16 0 300 600     # full-res render + those frames in out/grid-Film9x16.png
+python3 scripts/music.py analyze 318 470 # compare tracks (tempo, drops, spectrograms)
+python3 scripts/mix.py                   # rebuild the sound only
+scripts/master.sh 9x16 myfilm            # final 9:16: 4K + 1080p (+ silent copies)
+scripts/master.sh 16x9 myfilm            # final 16:9
+REUSE=1 scripts/master.sh 9x16 myfilm    # re-encode only (after a sound change)
 scripts/master.sh 9x16 myfilm --silent   # no sound at all
 ```
 
@@ -140,7 +163,9 @@ That file is local; `.gitignore` is committed.
 | text cut at the edges | "the headline overflows" | the copy got longer. Every headline uses fitSize |
 | rings in the glow | "banding in the background" | a glow drawn with a CSS gradient. It swaps in the dithered glow |
 | wrong or old data in the UI | "use the new demo data" | `filmData.ts` |
-| the sound feels off | "calmer sound", "no hats", "punchier" | `scripts/sound.py` presets (it can't listen, so tell it what you hear) |
+| the sound feels off | "I don't like the music", "more modern", "calmer" | another genre from the shortlist, re-measured (it can't listen, so tell it what you hear) |
+| it looks pixelated | "make it sharper" | 4K render + a supersampled 1080p copy; upload the 4K file |
+| two headlines at once in a transition | "text overlaps at 12 s" | the outgoing text rolls out before the incoming one rolls in |
 
 ---
 
@@ -149,7 +174,8 @@ That file is local; `.gitignore` is committed.
 - **UI:** no invented dashboards, and no hand-drawn "screens" of your product.
 - **Numbers:** no invented user counts, revenue or stats. Demo numbers get a "demo" label.
 - **Third parties:** no real trademarks or third-party brands in the demo data.
-- **The logo:** it appears once, at the end, joined to your CTA.
+- **The logo:** your real one, from your own file, once, at the end, joined to your CTA.
+- **Music:** only tracks it can licence for you (royalty-free, recorded in `docs/CREDITS.md`).
 
 If something can't be rendered deterministically (for example real-time 3D physics), it tells
 you, and it offers a captured clip instead.
